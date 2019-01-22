@@ -1,0 +1,101 @@
+import java.awt.*;
+import javax.swing.*;
+
+public class TILE extends JButton
+{
+	private int local_mines = 0;
+	private String number = "";	
+	
+	private boolean mineStatus = false;
+	private boolean revealed = false;
+	private boolean flagged = false;
+	private boolean active = true;
+	
+	private int xCoord;
+	private int yCoord;
+	
+	public TILE()
+	{
+		setPreferredSize(new Dimension(21,21));
+		setMargin(new Insets(0,0,0,0));
+	}
+	
+	public void setMineStatus(boolean bool)
+	{
+		mineStatus = bool;
+	}
+	
+	public boolean getMineStatus()
+	{
+		return mineStatus;
+	}
+	
+	public void setLocalMines(int mines)
+	{
+		local_mines = mines;
+		
+		if(local_mines > 0)
+			number = String.valueOf(local_mines);
+	}
+	
+	public int getLocalMines()
+	{
+		return local_mines;
+	}
+	
+	public void displayLocalMines()
+	{
+		setBackground(Color.white);
+		setText(number);
+	}
+	
+	public void setRevealed(boolean bool)
+	{
+		revealed = bool;
+	}
+	
+	public boolean getRevealed()
+	{
+		return revealed;
+	}
+	
+	public void setFlagged(boolean bool)
+	{
+		flagged = bool;
+	}
+	
+	public boolean getFlagged()
+	{
+		return flagged;
+	}
+	
+	public void setXCoord(int x)
+	{
+		xCoord = x;
+	}
+	
+	public void setYCoord(int y)
+	{
+		yCoord = y;
+	}
+	
+	public int getXCoord()
+	{
+		return xCoord;
+	}
+	
+	public int getYCoord()
+	{
+		return yCoord;
+	}
+	
+	public void setActive(boolean bool)
+	{
+		active = bool;
+	}
+	
+	public boolean getActive()
+	{
+		return active;
+	}
+}
