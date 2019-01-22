@@ -1,0 +1,97 @@
+import java.awt.*;
+import java.awt.event.*;
+import javax.swing.*;
+import javax.swing.event.*;
+
+public class OPEN
+{
+	public TILE currentTile;
+
+	public int max_x, max_y;
+	public int nonMines;
+	public int counter;
+
+	/*
+	  Recursive method
+
+	  Starts with the top-leftmost tile.
+	  Moves left-to-right and top-to-bottom.
+
+	  Upon being called the current tile is colored white,
+	  the number of mines revealed, and the revealed status
+	  set to true.
+
+	  1st For Loop:
+	  Moves left-to-right
+
+	  1st If statement:
+	  Checks for horizontal bounds
+
+	  2nd For Loop:
+	  Moves top-to-bottom
+
+	  2nd If statement:
+	  Checks for vertical bounds
+
+	  3rd If statement:
+	  Checks if the current tile is surrounded by mines or not
+	  -If surrounded by mines the number is revealed, the
+	   background is turned white and the loop(s) move onto
+	   the next tile in the sequence, and status changed.
+	  -Else the method is called recursively with the current
+	   tiles information.
+	  -Otherwise already revealed tiles are ignored; treated like
+	   they were just revealed.
+	*/
+
+	public OPEN(){}
+
+	public void OpenTiles(int x, int y, TILE[][] data, int tile_counter)
+	{
+		counter = tile_counter;
+
+		TILE currentTile = data[x][y];
+
+		currentTile.displayLocalMines();
+		currentTile.setRevealed(true);
+		currentTile.setBackground(Color.white);
+		counter++;
+
+		int i = x, j = y;
+
+		for(i = x - 1; i < (x + 2); i++)
+		{
+			if(i >= 0 && i < max_x)
+			{
+				for(j = y - 1 ; j < (y + 2); j++)
+				{
+					if(j >= 0 && j < max_y)
+					{
+						if(data[i][j].getLocalMines() > 0 && data[i][j].getRevealed() == false && data[i][j].getFlagged() == false)
+						{
+							data[i][j].displayLocalMines();
+							data[i][j].setRevealed(true);
+							data[i][j].setBackground(Color.white);
+							counter++;
+						}
+						else if(data[i][j].getLocalMines() == 0 && data[i][j].getRevealed() == false && data[i][j].getFlagged() == false)
+						{
+							OpenTiles(i, j, data, counter);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	public void setLimits(int x, int y)
+	{
+		max_x = x;
+		max_y = y;
+	}
+
+	public int getTileCounter()
+	{
+		return counter;
+	}
+}
