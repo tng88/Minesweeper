@@ -1,0 +1,711 @@
+import java.awt.*;
+import java.awt.event.*;
+import java.util.*;
+import javax.swing.*;
+import javax.swing.event.*;
+
+public class GUI extends JFrame
+{
+	public JMenuBar bar;
+
+	public JMenu game;
+	public JMenuItem newGame;
+	public JMenuItem difficulty;
+	public JMenuItem custom;
+	public JMenuItem exit;
+
+	public FIELD field;
+	public DIFFICULTY field_difficulty;
+	public CUSTOM custom_settings;
+	public MODEL model;
+	public OPEN open;
+	public TILE[][] tile;
+	public END end;
+
+	public int[][] mine_coords;
+
+	public int size_x = 9;
+	public int size_y = 9;
+	public int mines = 10;
+	public int max_mines;
+	public int non_mines;
+
+	public GUI()
+	{
+		field = new FIELD();
+
+		this.setTitle("Mine Sweeper");
+
+		buildMenuBar();
+
+		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		this.setLayout(new FlowLayout());
+		this.add(field);
+		this.setResizable(false);
+		this.pack();
+		this.setLocationRelativeTo(null);
+		this.setVisible(true);
+	}
+
+	public void buildMenuBar()
+	{
+		bar = new JMenuBar();
+		buildGameMenu();
+		bar.add(game);
+		setJMenuBar(bar);
+	}
+
+	public void buildGameMenu()
+	{
+		game = new JMenu("Game");
+		newGame = new JMenuItem("New Game");
+		difficulty = new JMenuItem("Difficulty");
+		custom = new JMenuItem("Custom");
+		exit = new JMenuItem("Exit");
+
+		game.add(newGame);
+		game.add(difficulty);
+		game.add(custom);
+		game.add(exit);
+
+		newGame.addActionListener(new MenuListener());
+		difficulty.addActionListener(new MenuListener());
+		custom.addActionListener(new MenuListener());
+		exit.addActionListener(new MenuListener());
+	}
+
+	public void ReSize()
+	{
+		this.pack();
+		this.setLocationRelativeTo(null);
+	}
+
+	public class FIELD extends JPanel
+	{
+		public FIELD()
+		{
+			placeTiles();
+		}
+
+		public void placeTiles()
+		{
+			this.setBackground(Color.BLACK);
+			this.setLayout(new GridLayout(size_x, size_y, 1, 1));
+
+			max_mines = (size_x - 1) * (size_y -1);
+			non_mines = size_x * size_y - mines;
+
+			open = new OPEN();
+			open.setLimits(size_x, size_y);
+
+			model = new MODEL();
+
+			for(int i = 0; i < size_x; i++)
+			{
+				for(int j = 0; j < size_y; j++)
+				{
+					this.add(model.getTile(i,j));
+				}
+			}
+		}
+
+		public void reset(int x, int y, int m)
+		{
+			size_x = x;
+			size_y = y;
+			mines = m;
+
+			max_mines = (size_x - 1) * (size_y -1);
+
+			if(max_mines < mines)
+			{
+				mines = max_mines;
+			}
+
+			non_mines = size_x * size_y - mines;
+
+			this.removeAll();
+			this.placeTiles();
+			this.validate();
+
+			ReSize();
+		}
+
+		public void reset()
+		{
+			this.removeAll();
+			this.placeTiles();
+			this.validate();
+		}
+	}
+
+	public class MODEL implements MouseListener
+	{
+		public int tile_counter = 0;
+
+		public MODEL()
+		{
+			tile = new TILE[size_x][size_y];
+
+			buildField();
+		}
+
+		public TILE getTile(int x, int y)
+		{
+			return tile[x][y];
+		}
+
+		public void buildField()
+		{
+			for(int i = 0; i < size_x; i++)
+			{
+				for(int j = 0; j < size_y; j++)
+				{
+					tile[i][j] = new TILE();
+					tile[i][j].addMouseListener(this);
+					tile[i][j].setBackground(Color.lightGray);
+				}
+			}
+
+			placeMines();
+		}
+
+		public void placeMines()
+		{
+			int x_coord;
+			int y_coord;
+
+			int mineCounter = 0;
+
+			mine_coords = new int[mines][2];
+
+			while(mineCounter < mines)
+			{
+				x_coord = (int)(Math.random() * size_x);
+				y_coord = (int)(Math.random() * size_y);
+
+				if(tile[x_coord][y_coord].getMineStatus() == false)
+				{
+					tile[x_coord][y_coord].setMineStatus(true);
+					tile[x_coord][y_coord].setXCoord(x_coord);
+					tile[x_coord][y_coord].setYCoord(y_coord);
+					mine_coords[mineCounter][0] = x_coord;
+					mine_coords[mineCounter][1] = y_coord;
+					mineCounter++;
+				}
+			}
+
+			for(int current_x = 0; current_x < size_x; current_x++)
+			{
+				for(int current_y = 0; current_y < size_y; current_y++)
+				{
+					if(tile[current_x][current_y].getMineStatus() == false)
+					{
+						int local_mines = locateMines(current_x, current_y);
+						tile[current_x][current_y].setLocalMines(local_mines);
+
+						tile[current_x][current_y].setXCoord(current_x);
+						tile[current_x][current_y].setYCoord(current_y);
+						tile[current_x][current_y].setFont(new Font("CourierNew", Font.BOLD, 12));
+
+						if(local_mines == 0)
+							tile[current_x][current_y].setForeground(Color.white);
+						else if(local_mines == 1)
+							tile[current_x][current_y].setForeground(Color.blue);
+						else if(local_mines == 2)
+							tile[current_x][current_y].setForeground(Color.green);
+						else if(local_mines == 3)
+							tile[current_x][current_y].setForeground(Color.red);
+						else if(local_mines == 4)
+							tile[current_x][current_y].setForeground(Color.darkGray);
+						else if(local_mines == 5)
+							tile[current_x][current_y].setForeground(Color.orange);
+						else if(local_mines == 6)
+							tile[current_x][current_y].setForeground(Color.pink);
+						else if(local_mines == 7)
+							tile[current_x][current_y].setForeground(Color.magenta);
+						else if(local_mines == 8)
+							tile[current_x][current_y].setForeground(Color.black);
+					}
+				}
+			}
+		}
+
+		public int locateMines(int this_x, int this_y)
+		{
+			int i = this_x - 1;
+			int j = this_y - 1;
+
+			int mineCounter = 0;
+
+			for(i = this_x - 1; i < (this_x + 2); i++)
+			{
+				if(i >= 0 && i < size_x)
+				{
+					for(j = this_y - 1 ; j < (this_y + 2); j++)
+					{
+						if(j >= 0 && j < size_y)
+						{
+							if(tile[i][j].getMineStatus() == true)
+							{
+								mineCounter++;
+							}
+						}
+					}
+				}
+			}
+
+			return mineCounter;
+		}
+
+		public void blowMines(int x, int y)
+		{
+			for(int i = 0; i < mines; i++)
+			{
+				int new_x = mine_coords[i][0];
+				int new_y = mine_coords[i][1];
+
+				if(new_x == x && new_y == y)
+				{
+					tile[new_x][new_y].setIcon(new ImageIcon("Images/minered.jpg"));
+					tile[new_x][new_y].setBackground(Color.white);
+					tile[new_x][new_y].setRevealed(true);
+				}
+				else
+				{
+					if(!tile[new_x][new_y].getFlagged())
+					{
+						tile[new_x][new_y].setIcon(new ImageIcon("Images/mine.jpg"));
+					}
+
+					tile[new_x][new_y].setBackground(Color.white);
+					tile[new_x][new_y].setRevealed(true);
+				}
+			}
+		}
+
+		public void mousePressed (MouseEvent e)
+		{
+			TILE temp = (TILE)e.getSource();
+			int x = temp.getXCoord();
+			int y = temp.getYCoord();
+
+			if(e.getButton() == 1)
+			{
+				if(temp.getRevealed() == false && temp.getFlagged() != true)
+				{
+					if(temp.getMineStatus() == true)
+					{
+						blowMines(x,y);
+						for(int i = 0; i < size_x; i++)
+						{
+							for(int j = 0; j < size_y; j++)
+							{
+								if(tile[i][j].getMineStatus() == false)
+								{
+									tile[i][j].setBackground(Color.pink);
+									tile[i][j].setActive(false);
+
+									if(tile[i][j].getFlagged() == true)
+									{
+										tile[i][j].setIcon(new ImageIcon("Images/minex.jpg"));
+									}
+								}
+							}
+						}
+
+						end = new END(-1);
+					}
+					else if(temp.getMineStatus() == false && temp.getActive() == true)
+					{
+						if(temp.getLocalMines() == 0)
+						{
+							open.OpenTiles(x, y, tile, tile_counter);
+							tile_counter = open.getTileCounter();
+						}
+						else if(temp.getLocalMines() > 0)
+						{
+							tile_counter++;
+							temp.displayLocalMines();
+							temp.setRevealed(true);
+						}
+					}
+
+					if(tile_counter == non_mines)
+					{
+						end = new END(1);
+					}
+				}
+			}
+			else if(e.getButton() == 3)
+			{
+				if(temp.getActive() == true)
+				{
+					if(temp.getRevealed() == false && temp.getFlagged() == false)
+					{
+						temp.setIcon(new ImageIcon("Images/flag.jpg"));
+						temp.setFlagged(true);
+					}
+					else if(temp.getFlagged() == true)
+					{
+						temp.setIcon(null);
+						temp.setFlagged(false);
+					}
+				}
+			}
+
+		}
+		public void mouseClicked (MouseEvent e) {}
+		public void mouseEntered (MouseEvent e) {}
+		public void mouseReleased (MouseEvent e) {}
+ 		public void mouseExited (MouseEvent e) {}
+	}
+
+	public class DIFFICULTY extends JDialog implements ActionListener
+	{
+		private JButton OK = new JButton("OK");
+		private JButton CANCEL = new JButton("CANCEL");
+
+		private JPanel panel1 = new JPanel();
+		private JPanel panel2 = new JPanel();
+		private JPanel panel3 = new JPanel();
+		private JPanel panel4 = new JPanel();
+
+		private JPanel Beginner_panel = new JPanel();
+		private JPanel Intermediate_panel = new JPanel();
+		private JPanel Advanced_panel = new JPanel();
+
+		private JRadioButton beginner = new JRadioButton("Beginner");
+		private JRadioButton intermediate = new JRadioButton("Intermediate");
+		private JRadioButton advanced = new JRadioButton("Advanced");
+
+		private int new_x;
+		private int new_y;
+		private int new_mines;
+
+		private int Beginner_x = 9;
+		private int Beginner_y = 9;
+		private int Beginner_mines = 10;
+
+		private JLabel beginner2 = new JLabel("10 Mines");
+		private JLabel beginner3 = new JLabel("9 x 9 tile grid");
+
+		private int Intermediate_x = 16;
+		private int Intermediate_y = 16;
+		private int Intermediate_mines = 40;
+
+		private JLabel intermediate2 = new JLabel("40 Mines");
+		private JLabel intermediate3 = new JLabel("16 x 16 tile grid");
+
+		private int Advanced_x = 16;
+		private int Advanced_y = 30;
+		private int Advanced_mines = 99;
+
+		private JLabel advanced2 = new JLabel("99 Mines");
+		private JLabel advanced3 = new JLabel("16 x 30 tile grid");
+
+		public DIFFICULTY()
+		{
+			super((JFrame)null,true);
+
+			this.setTitle("Mine Sweeper");
+
+			panel1.setLayout(new BorderLayout());
+			panel2.setLayout(new GridLayout(3,2));
+			panel3.setLayout(new FlowLayout());
+
+			OK.addActionListener(this);
+			CANCEL.addActionListener(this);
+			beginner.addActionListener(this);
+			intermediate.addActionListener(this);
+			advanced.addActionListener(this);
+
+			Beginner_panel.setLayout(new GridLayout(3,1));
+			Beginner_panel.add(beginner);
+			Beginner_panel.add(beginner2);
+			Beginner_panel.add(beginner3);
+
+			Intermediate_panel.setLayout(new GridLayout(3,1));
+			Intermediate_panel.add(intermediate);
+			Intermediate_panel.add(intermediate2);
+			Intermediate_panel.add(intermediate3);
+
+			Advanced_panel.setLayout(new GridLayout(3,1));
+			Advanced_panel.add(advanced);
+			Advanced_panel.add(advanced2);
+			Advanced_panel.add(advanced3);
+
+			panel2.setLayout(new GridLayout(1,3));
+			panel2.add(Beginner_panel);
+			panel2.add(Intermediate_panel);
+			panel2.add(Advanced_panel);
+
+			panel4.setLayout(new GridLayout(1,2));
+			panel4.add(panel2);
+
+			panel3.add(OK);
+			panel3.add(CANCEL);
+
+			panel1.add(panel4, BorderLayout.NORTH);
+			panel1.add(panel3, BorderLayout.SOUTH);
+
+			this.add(panel1);
+			this.pack();
+			this.setLocationRelativeTo(null);
+			this.setResizable(false);
+			this.setVisible(true);
+		}
+
+		public void actionPerformed(ActionEvent e)
+		{
+			if(e.getSource() == beginner)
+			{
+				new_x = Beginner_x;
+				new_y = Beginner_x;
+				new_mines = Beginner_mines;
+				beginner.setSelected(true);
+				intermediate.setSelected(false);
+				advanced.setSelected(false);
+			}
+			else if(e.getSource() == intermediate)
+			{	new_x = Intermediate_x;
+				new_y = Intermediate_x;
+				new_mines = Intermediate_mines;
+				beginner.setSelected(false);
+				intermediate.setSelected(true);
+				advanced.setSelected(false);
+			}
+			else if(e.getSource() == advanced)
+			{
+				new_x = Advanced_x;
+				new_y = Advanced_y;
+				new_mines = Advanced_mines;
+				beginner.setSelected(false);
+				intermediate.setSelected(false);
+				advanced.setSelected(true);
+			}
+
+			if(e.getSource() == OK)
+			{
+				model.buildField();
+				field.reset(new_x, new_y, new_mines);
+				this.setVisible(false);
+			}
+			else if(e.getSource() == CANCEL)
+			{
+				this.setVisible(false);
+			}
+		}
+	}
+
+	public class CUSTOM extends JDialog implements ActionListener
+	{
+		private JPanel custom_panel_1;
+		private JPanel custom_panel_2;
+		private JPanel custom_panel_3;
+
+		private JTextField width_input;
+		private JTextField height_input;
+		private JTextField mine_input;
+
+		private JLabel width_label;
+		private JLabel height_label;
+		private JLabel mine_label;
+
+		private JButton OK;
+		private JButton CANCEL;
+
+		private int new_x;
+		private int new_y;
+		private int new_mines;
+
+		private int max_width = 30;
+		private int max_height = 16;
+		private int max_mines = 435;
+
+		private int min_width = 9;
+		private int min_height = 9;
+		private int min_mines = 10;
+
+		public CUSTOM()
+		{
+			super((JFrame)null,true);
+
+			this.setTitle("Custom Settings");
+
+			buildDisplay();
+
+			this.add(custom_panel_1);
+			this.pack();
+			this.setLocationRelativeTo(null);
+			this.setResizable(false);
+			this.setVisible(true);
+		}
+
+		public void buildDisplay()
+		{
+			width_input = new JTextField();
+			height_input = new JTextField();
+			mine_input = new JTextField();
+
+			width_label = new JLabel("Width(9-30)");
+			height_label = new JLabel("Height(9-16)");
+			mine_label = new JLabel("Mines(10-435)");
+
+			width_label.setHorizontalAlignment(0);
+			height_label.setHorizontalAlignment(0);
+			mine_label.setHorizontalAlignment(0);
+
+			OK = new JButton("Ok");
+			OK.addActionListener(this);
+
+			CANCEL = new JButton("Cancel");
+			CANCEL.addActionListener(this);
+
+			custom_panel_1 = new JPanel();
+			custom_panel_2 = new JPanel();
+			custom_panel_3 = new JPanel();
+
+			custom_panel_1.setLayout(new BorderLayout());
+			custom_panel_2.setLayout(new GridLayout(3,2));
+			custom_panel_3.setLayout(new FlowLayout());
+
+			custom_panel_2.add(width_label);
+			custom_panel_2.add(width_input);
+			custom_panel_2.add(height_label);
+			custom_panel_2.add(height_input);
+			custom_panel_2.add(mine_label);
+			custom_panel_2.add(mine_input);
+
+			custom_panel_3.add(OK);
+			custom_panel_3.add(CANCEL);
+
+			custom_panel_1.add(custom_panel_2, BorderLayout.NORTH);
+			custom_panel_1.add(custom_panel_3, BorderLayout.SOUTH);
+		}
+
+		public void convertInput()
+		{
+			new_x = Integer.parseInt(height_input.getText());
+			new_y = Integer.parseInt(width_input.getText());
+			new_mines = Integer.parseInt(mine_input.getText());
+
+			if(new_x > max_height)
+				new_x = max_height;
+			else if(new_x < min_height)
+				new_x = min_height;
+
+			if(new_y > max_width)
+				new_y = max_width;
+			else if(new_y < min_width)
+				new_y = min_width;
+
+			max_mines = (new_y - 1) * (new_x - 1);
+
+			if(new_mines > max_mines)
+				new_mines = max_mines;
+			else if(new_mines < min_mines)
+				new_mines = min_mines;
+		}
+
+		public void actionPerformed(ActionEvent e)
+		{
+			if(e.getSource() == OK)
+			{
+				convertInput();
+				field.reset(new_x, new_y,new_mines);
+				this.setVisible(false);
+			}
+			else if(e.getSource() == CANCEL)
+			{
+				this.setVisible(false);
+			}
+		}
+	}
+
+	public class END extends JDialog implements ActionListener
+	{
+		private JPanel end_panel_1;
+		private JPanel end_panel_2;
+
+		private JButton NEW = new JButton("New Game");
+		private JButton EXIT = new JButton("Exit");
+
+		public END(int indicator)
+		{
+			super((JFrame)null,true);
+
+			this.setTitle("End Game");
+
+			JLabel lose_game = new JLabel("You have lost the game.");
+			JLabel win_game = new JLabel("You have won the game.");
+
+			lose_game.setHorizontalAlignment(0);
+			win_game.setHorizontalAlignment(0);
+
+			end_panel_1 = new JPanel();
+			end_panel_1.setLayout(new GridLayout(2,1));
+
+			if(indicator == -1)
+			{
+				end_panel_1.add(lose_game);
+			}
+			else if(indicator == 1)
+			{
+				end_panel_1.add(win_game);
+			}
+
+			end_panel_2 = new JPanel();
+			end_panel_2.setLayout(new FlowLayout());
+			end_panel_2.add(NEW);
+			end_panel_2.add(EXIT);
+
+			end_panel_1.add(end_panel_2);
+			NEW.addActionListener(this);
+			EXIT.addActionListener(this);
+
+			this.add(end_panel_1);
+			this.pack();
+			this.setLocationRelativeTo(null);
+			this.setResizable(false);
+			this.setVisible(true);
+		}
+
+		public void actionPerformed(ActionEvent e)
+		{
+			if(e.getSource() == NEW)
+			{
+				field.reset();
+				this.setVisible(false);
+			}
+			else if(e.getSource() == EXIT)
+			{
+				System.exit(0);
+			}
+		}
+	}
+
+	public class MenuListener implements ActionListener
+	{
+		public void actionPerformed(ActionEvent e)
+		{
+			if(e.getSource() == newGame)
+			{
+				model.buildField();
+				field.reset();
+			}
+			else if(e.getSource() == difficulty)
+			{
+				field_difficulty = new DIFFICULTY();
+			}
+			else if(e.getSource() == custom)
+			{
+				custom_settings = new CUSTOM();
+			}
+			else if(e.getSource() == exit)
+			{
+				System.exit(0);
+			}
+		}
+	}
+}
