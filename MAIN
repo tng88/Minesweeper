@@ -1,0 +1,11 @@
+import javax.swing.*;
+
+public class MAIN
+{
+	private static GUI window;
+	
+	public static void main(String[] args)
+	{
+		window = new GUI();
+	}
+}
